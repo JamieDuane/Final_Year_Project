@@ -14,13 +14,24 @@ def get_b_c(U, t, N):
         Uw = np.multiply(Uw2, Uw1).reshape(shape[1] * shape[2], len(w)) + Uw3
         # complex(math.cos(2 * math.pi * w * t), -math.sin(2 * math.pi * w * t))
         angle = 2 * math.pi * w * t
-        complex_part = np.vectorize(complex)(np.cos(angle), -np.sin(angle))
+        complex_part = np.vectorize(complex)(np.cos(angle), np.sin(angle))
         Uw = np.multiply(complex_part, Uw)
         return Uw
     bc, e = quadpy.quad(f_b_c, 0, 1, epsabs=1e-1, epsrel=1e-1, limit=1000)
     return bc
 
-def get_info_loss(dic, res):
+def get_true_spectral_density_mtrx():
+    pass
+
+def get_info_loss(dic, res, Xc):
+    trace = []
+    Q = res.Xt - Xc
+    QT = Q.T.conj()
+    shape = Q.shape
+    for i in range(res.T+1):
+        m = np.dot(Q[:, i].reshape((shape[0], 1)), QT[i, :].reshape((1, shape[0])))
+        trace.append(np.trace(m).real)
+
     def f_b_c(w):
         k = []
         j = 1
@@ -38,9 +49,9 @@ def get_info_loss(dic, res):
             print(f'Round {j}/{len(w)}: {k[-1]}')
             j += 1
         return k
-    loss, _ = quadpy.quad(f_b_c, 0, 1)
-    print(loss)
-    return loss
+    #loss, _ = quadpy.quad(f_b_c, 0, 1)
+    #print(loss)
+    return np.mean(trace)
 
 def compress(Xt):
     res = CSOAP(Xt=Xt, q=5)
@@ -79,22 +90,24 @@ def compress(Xt):
     return dic2, res, Xc
 
 def compress_multiple_file():
-    l = [i for i in range(500, 5100, 100)]
+    l = [i for i in range(500, 1100, 100)]
     dic = {i:{'T': l.copy(), 'info_loss':[]} for i in [100, 150, 200]}
     for d in [100, 150, 200]:
-        for t in range(500, 5100, 100):
+        for t in range(500, 1100, 100):
             with open(f'data/d{d}T{t}.npy', 'rb') as f:
                 Xt = np.load(f)
             bc_dic, res, Xc = compress(Xt)
-            info_loss = get_info_loss(bc_dic, res)
+            info_loss = get_info_loss(bc_dic, res, Xc)
             dic[d]['info_loss'].append(info_loss)
     return dic
 
 if __name__ == '__main__':
     dic = compress_multiple_file()
+    with open('data/info_loss.json', 'w+') as f:
+        json.dump(dic, f)
 
     '''
-    with open('data/d200T5000.npy', 'rb') as f:
+    #with open('data/d200T5000.npy', 'rb') as f:
         Xt = np.load(f)
         # Xt = Xt.T
     dic, res, Xc = compress(Xt)

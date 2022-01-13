@@ -16,31 +16,29 @@ def dataset_generator_v1():
 def dataset_generator_v2(T, d, q, s_star, f_name='data'):
     # Xt = AF[t] + e[t]
     # define A
+    X = np.zeros((d, T+1))
     A = np.zeros((d, q))
     for i in range(s_star):
         A[i, :] = np.random.normal(0, 1, q)
 
     # define F[t]
     # F[t] = DF[t-1] + shita[t-1]
-    shita = np.zeros((q, T+1))
-    F = np.zeros((q, T+1))
-    for i in range(T+1):
-        if i == 0:
-            F[:, i] = np.random.normal(loc=0, size=q)
-        else:
-            F[:, i] = 0.8 * F[:, i-1] + shita[:, i-1]
-        shita[:, i] = np.random.normal(loc=0, scale=1, size=q)
+    F = np.random.normal(loc=0, size=q)
+    F0 = F
+    shita = np.random.normal(loc=0, scale=1, size=q)
+    e = np.random.normal(0, 1, T + 1)
+    X[:, 0] = np.dot(A, F)+e
+    for i in range(1,T+1):
+        F = 0.8 * F + shita
+        shita = np.random.normal(loc=0, scale=1, size=q)
+        e = np.random.normal(0, 1, T + 1)
+        X[:, i] = np.dot(A, F)+e
 
     # define e[t]
-    et = np.zeros((d, T+1))
-    for i in range(d):
-        et[i, :] = np.random.normal(0, 1, T+1)
-
-    Xt = np.add(np.dot(A, F), et)
-    #print(Xt.shape)
+    print(X.shape)
 
     with open(f'data/{f_name}.npy', 'wb') as f:
-        np.save(f, Xt)
+        np.save(f, X)
 
 if __name__ == '__main__':
     for d in [100, 150, 200]:
